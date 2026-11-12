@@ -1,0 +1,16 @@
+[
+ {
+  "slot": "pr-87",
+  "title": "PR #87: Defence buildings: breakable walls, rubble, repairs, staffed towers",
+  "source": "feature/defence-buildings",
+  "sha": "ea6def249b16a67618993af0c891b2b048aa9703",
+  "built": "2026-11-12T00:42:23Z"
+ },
+ {
+  "slot": "pr-91",
+  "title": "PR #91: Grumpkins talk: gibberish glyph speech bubbles",
+  "source": "feature/grump-speech",
+  "sha": "5eb90149db3fd3b6a0d0525fa333abafa7ed958e",
+  "built": "2026-11-11T13:42:26Z"
+ }
+]

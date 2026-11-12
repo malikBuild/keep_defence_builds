@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport"
+  content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<meta name="color-scheme" content="dark light">
+<title>Builds</title>
+<link id="favicon" rel="icon" href="data:,">
+<style>
+  /* Black and white, following the phone's dark/light setting, with one
+     accent (site.json "accent", turquoise by default). --ink is the accent
+     as text: darkened on white so it stays readable. */
+  :root { --hot: #40e0d0; --bg: #000; --panel: #111; --text: #fff;
+    --dim: #a8a8a8; --line: #ffffff24; --ink: var(--hot); }
+  @media (prefers-color-scheme: light) {
+    :root { --bg: #fff; --panel: #f4f4f4; --text: #000; --dim: #555;
+      --line: #00000024; --ink: color-mix(in srgb, var(--hot) 50%, #000); }
+  }
+  * { box-sizing: border-box; }
+  html { background: var(--bg); }
+  body { margin: 0; min-height: 100vh; color: var(--text);
+    background: var(--bg);
+    font: 17px/1.5 system-ui, -apple-system, "Segoe UI", Roboto,
+      sans-serif; }
+  main { max-width: 600px; margin: 0 auto;
+    padding: max(24px, env(safe-area-inset-top)) 16px 48px; }
+  header { text-align: center; }
+  header img { width: 104px; height: 104px; border-radius: 22px;
+    border: 1px solid var(--line); }
+  header img:not([src]) { display: none; }
+  h1 { margin: 14px 0 4px; font-size: 36px; line-height: 1.1;
+    overflow-wrap: anywhere; }
+  .tag { color: var(--dim); margin: 0 0 22px; }
+  a.play { display: block; text-align: center; background: var(--hot);
+    color: #000; font-weight: 800; font-size: 24px; padding: 16px;
+    border-radius: 14px; text-decoration: none;
+    box-shadow: 0 6px 0 var(--text); }
+  a.play:active { transform: translateY(4px);
+    box-shadow: 0 2px 0 var(--text); }
+  .latest-meta { text-align: center; color: var(--dim); font-size: 14px;
+    margin: 10px 0 24px; overflow-wrap: anywhere; }
+  section { background: var(--panel); border-radius: 16px;
+    border: 1px solid var(--line); padding: 16px 18px; margin: 16px 0; }
+  h2 { margin: 0 0 10px; font-size: 20px; color: var(--ink); }
+  .build { display: flex; gap: 12px; align-items: center; padding: 10px 0;
+    border-top: 1px solid var(--line); }
+  .build:first-child { border-top: 0; }
+  .build .info { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+  .build .meta { color: var(--dim); font-size: 13px; }
+  .build a { color: var(--ink); font-weight: 700; text-decoration: none;
+    padding: 10px 4px; white-space: nowrap; }
+  .note { color: var(--dim); text-align: center; }
+  #howto b { color: var(--ink); }
+  #howto h2:not(:first-child) { margin-top: 20px; }
+  #howto ol, #howto ul { margin: 0; padding-left: 22px; }
+  #howto li { margin: 8px 0; }
+  footer { text-align: center; color: var(--dim); font-size: 13px;
+    margin-top: 28px; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <img id="icon" alt="">
+    <h1 id="title"></h1>
+    <p class="tag" id="tagline"></p>
+  </header>
+  <div id="latest"><p class="note">Loading…</p></div>
+  <section id="howto" hidden></section>
+  <section id="older" hidden>
+    <h2>Other builds</h2>
+    <div id="list"></div>
+  </section>
+  <footer>Published by CI. Old builds are removed automatically.</footer>
+</main>
+<script>
+  // site.json and howto.html are per game; builds.json is written by CI.
+  const ORIENT = {
+    portrait: "Hold your phone upright.",
+    landscape: "Turn your phone sideways.",
+  };
+  const $ = (id) => document.getElementById(id);
+  const href = (b) => `builds/${encodeURIComponent(b.slot)}/`;
+
+  function meta(b) {
+    const when = (b.built || "").replace("T", " ").replace("Z", " UTC");
+    return [b.source, (b.sha || "").slice(0, 7), when]
+      .filter(Boolean).join(" · ");
+  }
+
+  function el(tag, cls, text) {
+    const e = document.createElement(tag);
+    e.className = cls || "";
+    e.textContent = text || "";
+    return e;
+  }
+
+  async function get(url, as) {
+    try {
+      const r = await fetch(url, { cache: "no-store" });
+      return r.ok ? await r[as]() : null;
+    } catch {
+      return null;
+    }
+  }
+
+  function showSite(site) {
+    const title = site.title || "Builds";
+    document.title = title;
+    $("title").textContent = title;
+    $("tagline").textContent = [site.tagline, ORIENT[site.orientation]]
+      .filter(Boolean).join(" ");
+    if (site.icon) $("icon").src = $("favicon").href = site.icon;
+    if (site.accent) {
+      document.documentElement.style.setProperty("--hot", site.accent);
+    }
+  }
+
+  function showBuilds(builds) {
+    const latest = $("latest");
+    latest.textContent = "";
+    if (!builds.length) {
+      latest.append(el("p", "note", "No builds yet."));
+      return;
+    }
+    const play = el("a", "play", "▶ PLAY");
+    play.href = href(builds[0]);
+    const info = `${builds[0].title} · ${meta(builds[0])}`;
+    latest.append(play, el("p", "latest-meta", info));
+    for (const b of builds.slice(1)) {
+      const row = el("div", "build");
+      const text = el("div", "info");
+      text.append(el("div", "", b.title), el("div", "meta", meta(b)));
+      const a = el("a", "", "PLAY");
+      a.href = href(b);
+      row.append(text, a);
+      $("list").append(row);
+    }
+    $("older").hidden = builds.length < 2;
+  }
+
+  (async () => {
+    showSite((await get("site.json", "json")) || {});
+    showBuilds((await get("builds.json", "json")) || []);
+    const howto = await get("howto.html", "text");
+    if (howto) {
+      $("howto").innerHTML = howto;
+      $("howto").hidden = false;
+    }
+  })();
+</script>
+</body>
+</html>
